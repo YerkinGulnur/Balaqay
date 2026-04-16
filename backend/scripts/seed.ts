@@ -1,0 +1,693 @@
+/**
+ * Balaqay — Database Seed Script
+ * Run: npm run db:seed
+ *
+ * Seeds:
+ *  1. All predefined tasks (the full catalogue)
+ *  2. A demo user + 2 children with measurements
+ */
+
+import 'reflect-metadata';
+import * as dotenv from 'dotenv';
+import { DataSource } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+
+dotenv.config();
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
+interface Children {
+  id: string;
+  user_id: string;
+  name: string;
+  birth_date: Date;
+  age_group: string;
+  avatar_color: string;
+}
+
+// ─── Data source (plain TypeORM, no NestJS) ───────────────────
+const AppDataSource = new DataSource({
+  type: 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT) || 5432,
+  username: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'postgres',
+  database: process.env.DB_NAME || 'balaqay',
+  synchronize: false,
+  logging: false,
+});
+
+// ─── Task catalogue ───────────────────────────────────────────
+
+type AgeGroup = '0-1' | '1-3' | '3-6' | '6-10';
+type TaskType = 'игровое' | 'двигательное' | 'речевое' | 'когнитивное';
+type TaskSection = 'задание' | 'питание' | 'развитие';
+
+interface TaskSeed {
+  title: string;
+  description: string;
+  emoji: string;
+  type: TaskType;
+  section: TaskSection;
+  age_group: AgeGroup;
+  day_slot: 1 | 2;
+  sort_order: number;
+}
+
+const TASKS: TaskSeed[] = [
+  // ── 0-1 год ── ЗАДАНИЯ ─────────────────────────────────────
+  {
+    age_group: '0-1',
+    section: 'задание',
+    type: 'двигательное',
+    day_slot: 1,
+    sort_order: 1,
+    emoji: '🤲',
+    title: 'Массаж ручек и ножек',
+    description:
+      'Аккуратно делайте массаж ручек и ножек малышу по 5 минут. Это улучшает кровообращение и тактильное восприятие.',
+  },
+  {
+    age_group: '0-1',
+    section: 'задание',
+    type: 'когнитивное',
+    day_slot: 2,
+    sort_order: 1,
+    emoji: '🧸',
+    title: 'Слежение за игрушкой',
+    description:
+      'Медленно двигайте яркую игрушку перед лицом малыша. Ребёнок тренирует фокусировку и слежение взглядом.',
+  },
+  {
+    age_group: '0-1',
+    section: 'задание',
+    type: 'речевое',
+    day_slot: 1,
+    sort_order: 2,
+    emoji: '🎵',
+    title: 'Колыбельная перед сном',
+    description:
+      'Спойте колыбельную, держа ребёнка на руках. Голос мамы и ритм успокаивают и развивают слух.',
+  },
+  {
+    age_group: '0-1',
+    section: 'задание',
+    type: 'игровое',
+    day_slot: 2,
+    sort_order: 2,
+    emoji: '👋',
+    title: 'Игра в «ку-ку»',
+    description:
+      'Прячьте лицо за руками и открывайте со словом «ку-ку!». Развивает понятие постоянства объекта.',
+  },
+  {
+    age_group: '0-1',
+    section: 'задание',
+    type: 'двигательное',
+    day_slot: 1,
+    sort_order: 3,
+    emoji: '🏋️',
+    title: 'Время на животике',
+    description:
+      'Выкладывайте малыша на живот на 5–10 минут. Укрепляет шею, спину и готовит к ползанию.',
+  },
+  {
+    age_group: '0-1',
+    section: 'задание',
+    type: 'когнитивное',
+    day_slot: 2,
+    sort_order: 3,
+    emoji: '🔔',
+    title: 'Звуковая игра',
+    description:
+      'Погремите игрушкой слева, потом справа от малыша. Развивает слуховую локализацию и внимание.',
+  },
+  {
+    age_group: '0-1',
+    section: 'задание',
+    type: 'речевое',
+    day_slot: 1,
+    sort_order: 4,
+    emoji: '💬',
+    title: 'Разговор с малышом',
+    description:
+      'Описывайте вслух всё что делаете: «Сейчас мама умоет тебе ручки...». Формирует речевые паттерны.',
+  },
+
+  // ── 0-1 год ── РАЗВИТИЕ ────────────────────────────────────
+  {
+    age_group: '0-1',
+    section: 'развитие',
+    type: 'когнитивное',
+    day_slot: 1,
+    sort_order: 1,
+    emoji: '👆',
+    title: 'Тактильное развитие',
+    description:
+      'Ребёнок познаёт мир через прикосновения. Давайте предметы разной текстуры: мягкие, гладкие, шершавые. Разнообразие ощущений строит нейронные связи.',
+  },
+  {
+    age_group: '0-1',
+    section: 'развитие',
+    type: 'речевое',
+    day_slot: 2,
+    sort_order: 1,
+    emoji: '👂',
+    title: 'Слуховое развитие',
+    description:
+      'Говорите, пойте, читайте вслух — малыш всё слышит и запоминает ритмику речи. Используйте разные интонации, это стимулирует мозг.',
+  },
+
+  // ── 0-1 год ── ПИТАНИЕ ─────────────────────────────────────
+  {
+    age_group: '0-1',
+    section: 'питание',
+    type: 'когнитивное',
+    day_slot: 1,
+    sort_order: 1,
+    emoji: '🤱',
+    title: 'Грудное вскармливание',
+    description:
+      'Грудное молоко — идеальная еда до 6 месяцев. Содержит антитела, формирует иммунитет. Кормите по требованию.',
+  },
+  {
+    age_group: '0-1',
+    section: 'питание',
+    type: 'когнитивное',
+    day_slot: 2,
+    sort_order: 1,
+    emoji: '🥦',
+    title: 'Первый прикорм (с 6 мес.)',
+    description:
+      'Начните с кабачка, цветной капусты или брокколи. Вводите по 1 продукту каждые 5–7 дней. Следите за реакцией кожи и стулом.',
+  },
+
+  // ── 1-3 года ── ЗАДАНИЯ ────────────────────────────────────
+  {
+    age_group: '1-3',
+    section: 'задание',
+    type: 'когнитивное',
+    day_slot: 1,
+    sort_order: 1,
+    emoji: '🔺',
+    title: 'Пирамидка',
+    description:
+      'Соберите пирамидку из 5 колец вместе с ребёнком, называя цвета. Тренирует порядок, цвета и мелкую моторику.',
+  },
+  {
+    age_group: '1-3',
+    section: 'задание',
+    type: 'речевое',
+    day_slot: 2,
+    sort_order: 1,
+    emoji: '📚',
+    title: 'Читаем сказку',
+    description:
+      'Прочитайте короткую сказку, показывая картинки и задавая вопросы «А где мишка?». Развивает словарный запас.',
+  },
+  {
+    age_group: '1-3',
+    section: 'задание',
+    type: 'игровое',
+    day_slot: 1,
+    sort_order: 2,
+    emoji: '✏️',
+    title: 'Рисуем вместе',
+    description:
+      'Дайте большой лист и толстые мелки. Рисуйте круги, линии, называйте что получается. 10–15 минут.',
+  },
+  {
+    age_group: '1-3',
+    section: 'задание',
+    type: 'двигательное',
+    day_slot: 2,
+    sort_order: 2,
+    emoji: '💃',
+    title: 'Танцуем под музыку',
+    description:
+      'Включите детские песни и танцуйте вместе 10 минут. Развивает координацию, ритм, дарит радость.',
+  },
+  {
+    age_group: '1-3',
+    section: 'задание',
+    type: 'когнитивное',
+    day_slot: 1,
+    sort_order: 3,
+    emoji: '🎨',
+    title: 'Сортировка по цвету',
+    description:
+      'Разложите предметы (кубики, крышки) по цветам. Называйте каждый цвет. Тренирует категоризацию.',
+  },
+  {
+    age_group: '1-3',
+    section: 'задание',
+    type: 'речевое',
+    day_slot: 2,
+    sort_order: 3,
+    emoji: '🐘',
+    title: 'Угадай животное',
+    description:
+      'Показывайте карточки с животными и спрашивайте «Кто это?» «Как говорит?». Расширяет словарь.',
+  },
+  {
+    age_group: '1-3',
+    section: 'задание',
+    type: 'двигательное',
+    day_slot: 1,
+    sort_order: 4,
+    emoji: '⚽',
+    title: 'Кати мячик',
+    description:
+      'Сядьте напротив и катайте мяч друг другу. Тренирует координацию, ожидание очереди, социальность.',
+  },
+
+  // ── 1-3 года ── РАЗВИТИЕ ──────────────────────────────────
+  {
+    age_group: '1-3',
+    section: 'развитие',
+    type: 'речевое',
+    day_slot: 1,
+    sort_order: 1,
+    emoji: '💬',
+    title: 'Речевое развитие',
+    description:
+      'В 2 года — 50+ слов, к 3 годам — простые предложения. Читайте книги, называйте предметы, не используйте «детский» язык.',
+  },
+  {
+    age_group: '1-3',
+    section: 'развитие',
+    type: 'двигательное',
+    day_slot: 2,
+    sort_order: 1,
+    emoji: '✋',
+    title: 'Мелкая моторика',
+    description:
+      'Пазлы, кубики, пластилин, крупы (под наблюдением), шнуровка — всё это развивает руку и готовит к письму.',
+  },
+
+  // ── 1-3 года ── ПИТАНИЕ ───────────────────────────────────
+  {
+    age_group: '1-3',
+    section: 'питание',
+    type: 'когнитивное',
+    day_slot: 1,
+    sort_order: 1,
+    emoji: '🍽️',
+    title: 'Разнообразный стол',
+    description:
+      '5 приёмов пищи небольшими порциями. Каши, супы, мясо, рыба, фрукты и овощи. Избегайте сахара и соли.',
+  },
+  {
+    age_group: '1-3',
+    section: 'питание',
+    type: 'когнитивное',
+    day_slot: 2,
+    sort_order: 1,
+    emoji: '💧',
+    title: 'Питьевой режим',
+    description:
+      '1–1.2 л воды в день. Компоты без сахара, кисломолочные продукты. Сок — не более 100 мл в день.',
+  },
+
+  // ── 3-6 лет ── ЗАДАНИЯ ────────────────────────────────────
+  {
+    age_group: '3-6',
+    section: 'задание',
+    type: 'когнитивное',
+    day_slot: 1,
+    sort_order: 1,
+    emoji: '🧩',
+    title: 'Пазл 24 детали',
+    description:
+      'Сложите вместе пазл из 24 деталей. Обсуждайте картинку. Развивает логику, пространственное мышление, усидчивость.',
+  },
+  {
+    age_group: '3-6',
+    section: 'задание',
+    type: 'игровое',
+    day_slot: 2,
+    sort_order: 1,
+    emoji: '🟫',
+    title: 'Лепка из пластилина',
+    description:
+      'Слепите любое животное из пластилина. Пусть ребёнок сам придумает что лепить. 15–20 минут.',
+  },
+  {
+    age_group: '3-6',
+    section: 'задание',
+    type: 'речевое',
+    day_slot: 1,
+    sort_order: 2,
+    emoji: '🔤',
+    title: 'Буквы по карточкам',
+    description:
+      'Покажите 5–7 букв на карточках, называйте их вместе. Придумайте слово на каждую букву.',
+  },
+  {
+    age_group: '3-6',
+    section: 'задание',
+    type: 'когнитивное',
+    day_slot: 2,
+    sort_order: 2,
+    emoji: '🧱',
+    title: 'ЛЕГО по схеме',
+    description:
+      'Постройте простую фигуру из конструктора по схеме из инструкции. Учит читать схемы и планировать.',
+  },
+  {
+    age_group: '3-6',
+    section: 'задание',
+    type: 'речевое',
+    day_slot: 1,
+    sort_order: 3,
+    emoji: '👨‍👩‍👧',
+    title: 'Рисуем семью',
+    description:
+      'Попросите нарисовать всю семью и рассказать о рисунке. Развивает речь, самовыражение, эмоциональный интеллект.',
+  },
+  {
+    age_group: '3-6',
+    section: 'задание',
+    type: 'двигательное',
+    day_slot: 2,
+    sort_order: 3,
+    emoji: '🤸',
+    title: 'Утренняя зарядка',
+    description:
+      'Сделайте зарядку вместе: прыжки, наклоны, повороты. 10–15 минут под весёлую музыку.',
+  },
+  {
+    age_group: '3-6',
+    section: 'задание',
+    type: 'игровое',
+    day_slot: 1,
+    sort_order: 4,
+    emoji: '🎭',
+    title: 'Ролевая игра',
+    description:
+      'Сыграйте в «магазин», «больницу» или «школу». Ролевые игры развивают социальные навыки и речь.',
+  },
+
+  // ── 3-6 лет ── РАЗВИТИЕ ───────────────────────────────────
+  {
+    age_group: '3-6',
+    section: 'развитие',
+    type: 'когнитивное',
+    day_slot: 1,
+    sort_order: 1,
+    emoji: '🏫',
+    title: 'Подготовка к школе',
+    description:
+      'Алфавит, счёт до 10, основные цвета и формы. Пазлы, ЛЕГО, рисование. 1–2 задания по 15–20 минут — норма для этого возраста.',
+  },
+  {
+    age_group: '3-6',
+    section: 'развитие',
+    type: 'речевое',
+    day_slot: 2,
+    sort_order: 1,
+    emoji: '🤝',
+    title: 'Социальные навыки',
+    description:
+      'Учите делиться игрушками, ждать своей очереди, выражать эмоции словами. Игры в группах детей очень важны.',
+  },
+
+  // ── 3-6 лет ── ПИТАНИЕ ────────────────────────────────────
+  {
+    age_group: '3-6',
+    section: 'питание',
+    type: 'когнитивное',
+    day_slot: 1,
+    sort_order: 1,
+    emoji: '🍳',
+    title: 'Горячий завтрак',
+    description:
+      'Горячая каша или яйца на завтрак обязательны. Фрукты в перекус. Мясо или рыба на обед. Лёгкий ужин.',
+  },
+  {
+    age_group: '3-6',
+    section: 'питание',
+    type: 'когнитивное',
+    day_slot: 2,
+    sort_order: 1,
+    emoji: '🍎',
+    title: 'Здоровые перекусы',
+    description:
+      'Яблоко, банан, йогурт, сырные кубики — идеальный перекус. Избегайте чипсов, сладостей, газировки.',
+  },
+
+  // ── 6-10 лет ── ЗАДАНИЯ ───────────────────────────────────
+  {
+    age_group: '6-10',
+    section: 'задание',
+    type: 'когнитивное',
+    day_slot: 1,
+    sort_order: 1,
+    emoji: '🔢',
+    title: 'Математические примеры',
+    description:
+      'Решите вместе 5–10 примеров на сложение и вычитание. Используйте счётные палочки или рисунки для наглядности.',
+  },
+  {
+    age_group: '6-10',
+    section: 'задание',
+    type: 'речевое',
+    day_slot: 2,
+    sort_order: 1,
+    emoji: '📖',
+    title: 'Читаем вслух',
+    description:
+      'Прочитайте страницу книги вслух — выразительно, с интонацией. Обсудите что произошло в отрывке.',
+  },
+  {
+    age_group: '6-10',
+    section: 'задание',
+    type: 'когнитивное',
+    day_slot: 1,
+    sort_order: 2,
+    emoji: '🧩',
+    title: 'Пазл 100 деталей',
+    description:
+      'Соберите пазл из 100 деталей. Развивает терпение, пространственное мышление, концентрацию внимания.',
+  },
+  {
+    age_group: '6-10',
+    section: 'задание',
+    type: 'двигательное',
+    day_slot: 2,
+    sort_order: 2,
+    emoji: '🤸',
+    title: 'Зарядка 15 минут',
+    description:
+      'Прыжки, отжимания от стены, приседания, планка. Поставьте таймер на 15 минут. Физическая активность = здоровый мозг.',
+  },
+  {
+    age_group: '6-10',
+    section: 'задание',
+    type: 'игровое',
+    day_slot: 1,
+    sort_order: 3,
+    emoji: '🗺️',
+    title: 'Нарисуй свой район',
+    description:
+      'Пусть ребёнок нарисует карту своего двора или района по памяти. Развивает пространственное мышление.',
+  },
+  {
+    age_group: '6-10',
+    section: 'задание',
+    type: 'когнитивное',
+    day_slot: 2,
+    sort_order: 3,
+    emoji: '♟️',
+    title: 'Настольная игра',
+    description:
+      'Сыграйте в шахматы, шашки или любую настольную игру. 25–30 минут развивают стратегическое мышление.',
+  },
+  {
+    age_group: '6-10',
+    section: 'задание',
+    type: 'речевое',
+    day_slot: 1,
+    sort_order: 4,
+    emoji: '✍️',
+    title: 'Пишем дневник',
+    description:
+      'Попросите написать 3–5 предложений о своём дне. Развивает письмо, рефлексию, грамотность.',
+  },
+
+  // ── 6-10 лет ── РАЗВИТИЕ ──────────────────────────────────
+  {
+    age_group: '6-10',
+    section: 'развитие',
+    type: 'когнитивное',
+    day_slot: 1,
+    sort_order: 1,
+    emoji: '🧠',
+    title: 'Когнитивное развитие',
+    description:
+      'Чтение, математика, логические игры. Шахматы и настольные игры отлично развивают мозг. Из приложений рекомендуем Lumosity, Peak, Elevate — 20 минут в день.',
+  },
+  {
+    age_group: '6-10',
+    section: 'развитие',
+    type: 'двигательное',
+    day_slot: 2,
+    sort_order: 1,
+    emoji: '⚽',
+    title: 'Физическое развитие',
+    description:
+      'Спортивные секции: танцы, гимнастика, плавание, футбол. Зарядка каждое утро. Прогулки минимум 1 час в день.',
+  },
+
+  // ── 6-10 лет ── ПИТАНИЕ ───────────────────────────────────
+  {
+    age_group: '6-10',
+    section: 'питание',
+    type: 'когнитивное',
+    day_slot: 1,
+    sort_order: 1,
+    emoji: '💪',
+    title: 'Энергия для роста',
+    description:
+      'Белок из мяса, рыбы, яиц и бобовых. Кальций из молочных продуктов для костей. Сложные углеводы (каши, хлеб) для энергии и работы мозга.',
+  },
+  {
+    age_group: '6-10',
+    section: 'питание',
+    type: 'когнитивное',
+    day_slot: 2,
+    sort_order: 1,
+    emoji: '👨‍👩‍👧',
+    title: 'Семейный стол',
+    description:
+      'Ешьте вместе всей семьёй хотя бы раз в день. Учите ребёнка читать состав продуктов. Фастфуд — не чаще 1 раза в неделю.',
+  },
+];
+
+// ─── Main seed function ───────────────────────────────────────
+
+async function seed(): Promise<void> {
+  console.log('🌱 Starting seed...');
+
+  await AppDataSource.initialize();
+  const db = AppDataSource;
+
+  // 1. Upsert tasks (idempotent — safe to run multiple times)
+  console.log('  → Seeding tasks...');
+  for (const task of TASKS) {
+    await db.query(
+      `INSERT INTO tasks (title, description, emoji, type, section, age_group, day_slot, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT DO NOTHING`,
+      [
+        task.title,
+        task.description,
+        task.emoji,
+        task.type,
+        task.section,
+        task.age_group,
+        task.day_slot,
+        task.sort_order,
+      ],
+    );
+  }
+  console.log(`  ✓ ${TASKS.length} tasks seeded`);
+
+  // 2. Demo user
+  console.log('  → Seeding demo user...');
+  const passwordHash = await bcrypt.hash('password', 10);
+
+  const existingUser = await db.query<User[]>(
+    `SELECT id FROM users WHERE email = 'demo@balaqay.app'`,
+  );
+
+  let userId: string;
+  if (existingUser.length > 0) {
+    userId = existingUser[0].id;
+    console.log('  ℹ Demo user already exists, skipping');
+  } else {
+    const [user] = await db.query<User[]>(
+      `INSERT INTO users (email, name, password_hash)
+       VALUES ('demo@balaqay.app','Лейла','${passwordHash}')
+       RETURNING id`,
+    );
+    userId = user.id;
+    console.log(`  ✓ Demo user created (id: ${userId})`);
+  }
+
+  // 3. Demo children
+  const existingChildren = await db.query<Children[]>(
+    `SELECT id FROM children WHERE user_id = '${userId}'`,
+  );
+
+  if (existingChildren.length === 0) {
+    console.log('  → Seeding demo children...');
+
+    // Child 1: Айя — 3-6 лет
+    const [child1] = await db.query<Children[]>(
+      `INSERT INTO children (user_id, name, birth_date, age_group, avatar_color)
+       VALUES ('${userId}','Айя','2020-04-15','3-6','#FFB347')
+       RETURNING id`,
+    );
+    // Child 2: Арлан — 6-10 лет
+    const [child2] = await db.query<Children[]>(
+      `INSERT INTO children (user_id, name, birth_date, age_group, avatar_color)
+       VALUES ('${userId}','Арлан','2017-09-01','6-10','#87CEEB')
+       RETURNING id`,
+    );
+
+    console.log(`  ✓ 2 children created`);
+
+    // 4. Measurement history for child 1 (Айя)
+    const measurements1 = [
+      { months_ago: 6, h: 97, w: 14.2 },
+      { months_ago: 5, h: 98.5, w: 14.6 },
+      { months_ago: 4, h: 100, w: 15.0 },
+      { months_ago: 3, h: 101.5, w: 15.3 },
+      { months_ago: 2, h: 103, w: 15.8 },
+      { months_ago: 1, h: 104, w: 16.2 },
+      { months_ago: 0, h: 105.5, w: 16.5 },
+    ];
+    for (const m of measurements1) {
+      await db.query(
+        `INSERT INTO child_measurements (child_id, height_cm, weight_kg, measured_at)
+         VALUES ($1,$2,$3, NOW() - INTERVAL '${m.months_ago} months')`,
+        [child1.id, m.h, m.w],
+      );
+    }
+
+    // Measurement history for child 2 (Арлан)
+    const measurements2 = [
+      { months_ago: 6, h: 118, w: 22.0 },
+      { months_ago: 5, h: 119.5, w: 22.5 },
+      { months_ago: 4, h: 121, w: 23.1 },
+      { months_ago: 3, h: 122, w: 23.5 },
+      { months_ago: 2, h: 123.5, w: 24.0 },
+      { months_ago: 1, h: 125, w: 24.6 },
+      { months_ago: 0, h: 126.5, w: 25.0 },
+    ];
+    for (const m of measurements2) {
+      await db.query(
+        `INSERT INTO child_measurements (child_id, height_cm, weight_kg, measured_at)
+         VALUES ($1,$2,$3, NOW() - INTERVAL '${m.months_ago} months')`,
+        [child2.id, m.h, m.w],
+      );
+    }
+
+    console.log('  ✓ Measurement history seeded');
+  }
+
+  await AppDataSource.destroy();
+  console.log('✅ Seed complete!');
+  console.log('');
+  console.log('  Demo login: demo@balaqay.app / password');
+}
+
+seed().catch((err) => {
+  console.error('❌ Seed failed:', err);
+  process.exit(1);
+});
